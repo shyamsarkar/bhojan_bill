@@ -127,7 +127,7 @@ pub struct KotOutput {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CustomerDetails {
     pub id: i64,
-    pub name: String,
+    pub name: Option<String>,
     pub phone: String,
     pub email: Option<String>,
     pub loyalty_points: i64,
@@ -1685,37 +1685,149 @@ fn get_customers(state: tauri::State<'_, db::DbPathState>) -> Result<Vec<Custome
 }
 
 #[tauri::command]
+fn find_customer_by_phone(
+    phone: String,
+    state: tauri::State<'_, db::DbPathState>,
+) -> Result<Option<CustomerDetails>, String> {
+    let conn = rusqlite::Connection::open(&state.path).map_err(|e| e.to_string())?;
+    let trimmed_phone = phone.trim();
+    if trimmed_phone.is_empty() {
+        return Ok(None);
+    }
+    
+    let customer = conn.query_row(
+        "SELECT id, name, phone, email, loyalty_points FROM customers WHERE phone = ?1",
+        [trimmed_phone],
+        |row| {
+            Ok(CustomerDetails {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                phone: row.get(2)?,
+                email: row.get(3)?,
+                loyalty_points: row.get(4)?,
+            })
+        },
+    ).optional().map_err(|e| e.to_string())?;
+
+    Ok(customer)
+}
+
+#[tauri::command]
 fn upsert_customer(
     id: Option<i64>,
-    name: String,
+    name: Option<String>,
     phone: String,
     email: Option<String>,
     loyalty_points: Option<i64>,
     state: tauri::State<'_, db::DbPathState>,
-) -> Result<(), String> {
+) -> Result<i64, String> {
     let conn = rusqlite::Connection::open(&state.path).map_err(|e| e.to_string())?;
+    let trimmed_phone = phone.trim().to_string();
+    if trimmed_phone.is_empty() {
+        return Err("Mobile number is required".to_string());
+    }
 
-    if let Some(cust_id) = id {
-        if let Some(pts) = loyalty_points {
-            // Full update including loyalty points when explicitly provided
-            conn.execute(
-                "UPDATE customers SET name = ?1, phone = ?2, email = ?3, loyalty_points = ?4 WHERE id = ?5",
-                params![name, phone, email, pts, cust_id],
-            ).map_err(|e| e.to_string())?;
+    let cleaned_name = name.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+
+    // Resolve target customer:
+    // If `id` is explicitly passed, find by `id`.
+    // If `id` is None, find by `phone`.
+    let target_id: Option<i64> = if let Some(cust_id) = id {
+        let exists: i64 = conn
+            .query_row("SELECT COUNT(*) FROM customers WHERE id = ?1", [cust_id], |row| row.get(0))
+            .unwrap_or(0);
+        if exists > 0 {
+            Some(cust_id)
         } else {
-            // Update without touching loyalty points
-            conn.execute(
-                "UPDATE customers SET name = ?1, phone = ?2, email = ?3 WHERE id = ?4",
-                params![name, phone, email, cust_id],
-            ).map_err(|e| e.to_string())?;
+            None
         }
     } else {
+        conn.query_row(
+            "SELECT id FROM customers WHERE phone = ?1",
+            [&trimmed_phone],
+            |row| row.get(0),
+        ).optional().map_err(|e| e.to_string())?
+    };
+
+    if let Some(cust_id) = target_id {
+        // Update existing customer:
+        // Only update name if a non-empty name was provided (do not overwrite existing with empty)
+        if let Some(ref new_name) = cleaned_name {
+            if let Some(pts) = loyalty_points {
+                conn.execute(
+                    "UPDATE customers SET name = ?1, phone = ?2, email = ?3, loyalty_points = ?4 WHERE id = ?5",
+                    params![new_name, trimmed_phone, email, pts, cust_id],
+                ).map_err(|e| e.to_string())?;
+            } else if email.is_some() {
+                conn.execute(
+                    "UPDATE customers SET name = ?1, phone = ?2, email = ?3 WHERE id = ?4",
+                    params![new_name, trimmed_phone, email, cust_id],
+                ).map_err(|e| e.to_string())?;
+            } else {
+                conn.execute(
+                    "UPDATE customers SET name = ?1, phone = ?2 WHERE id = ?3",
+                    params![new_name, trimmed_phone, cust_id],
+                ).map_err(|e| e.to_string())?;
+            }
+        } else {
+            // Keep existing stored name
+            if let Some(pts) = loyalty_points {
+                conn.execute(
+                    "UPDATE customers SET phone = ?1, email = ?2, loyalty_points = ?3 WHERE id = ?4",
+                    params![trimmed_phone, email, pts, cust_id],
+                ).map_err(|e| e.to_string())?;
+            } else if email.is_some() {
+                conn.execute(
+                    "UPDATE customers SET phone = ?1, email = ?2 WHERE id = ?3",
+                    params![trimmed_phone, email, cust_id],
+                ).map_err(|e| e.to_string())?;
+            } else {
+                conn.execute(
+                    "UPDATE customers SET phone = ?1 WHERE id = ?2",
+                    params![trimmed_phone, cust_id],
+                ).map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(cust_id)
+    } else {
+        // Insert new customer with optional name
         let pts = loyalty_points.unwrap_or(0);
         conn.execute(
             "INSERT INTO customers (name, phone, email, loyalty_points) VALUES (?1, ?2, ?3, ?4)",
-            params![name, phone, email, pts],
+            params![cleaned_name, trimmed_phone, email, pts],
         ).map_err(|e| e.to_string())?;
+        Ok(conn.last_insert_rowid())
     }
+}
+
+#[tauri::command]
+fn attach_customer_to_order(
+    order_id: i64,
+    customer_id: i64,
+    state: tauri::State<'_, db::DbPathState>,
+) -> Result<(), String> {
+    let conn = rusqlite::Connection::open(&state.path).map_err(|e| e.to_string())?;
+
+    // Verify customer exists
+    let customer_exists: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM customers WHERE id = ?1",
+        [customer_id],
+        |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    if customer_exists == 0 {
+        return Err("Customer not found".to_string());
+    }
+
+    let rows_affected = conn.execute(
+        "UPDATE orders SET customer_id = ?1 WHERE id = ?2",
+        params![customer_id, order_id],
+    ).map_err(|e| e.to_string())?;
+
+    if rows_affected == 0 {
+        return Err("Order not found".to_string());
+    }
+
     Ok(())
 }
 
@@ -1950,6 +2062,8 @@ pub fn run() {
             delete_product,
             get_customers,
             upsert_customer,
+            find_customer_by_phone,
+            attach_customer_to_order,
             get_sales_report,
             backup_db,
             restore_db,
@@ -2084,5 +2198,106 @@ mod tests {
         assert!(cols.contains(&"id".to_string()));
         assert!(cols.contains(&"username".to_string()));
         assert!(cols.contains(&"password_hash".to_string()));
+    }
+
+    #[test]
+    fn test_customer_lookup_upsert_and_attach() {
+        let conn = setup_test_db();
+
+        // 1. Verify customers.name is nullable (notnull == 0)
+        let mut pragma_stmt = conn.prepare("PRAGMA table_info(customers)").unwrap();
+        let name_col: (String, i32) = pragma_stmt
+            .query_map([], |row| Ok((row.get(1)?, row.get(3)?)))
+            .unwrap()
+            .map(|r| r.unwrap())
+            .find(|(col, _)| col == "name")
+            .expect("name column should exist");
+        assert_eq!(name_col.0, "name");
+        assert_eq!(name_col.1, 0, "customers.name should be nullable");
+
+        // 2. Test insert new customer with name
+        conn.execute(
+            "INSERT INTO customers (name, phone, email, loyalty_points) VALUES (?1, ?2, ?3, ?4)",
+            params![Some("Alice"), "9876543210", None::<String>, 0],
+        ).unwrap();
+        let alice_id = conn.last_insert_rowid();
+
+        // 3. Test lookup by phone
+        let cust: Option<CustomerDetails> = conn.query_row(
+            "SELECT id, name, phone, email, loyalty_points FROM customers WHERE phone = ?1",
+            ["9876543210"],
+            |row| Ok(CustomerDetails {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                phone: row.get(2)?,
+                email: row.get(3)?,
+                loyalty_points: row.get(4)?,
+            }),
+        ).optional().unwrap();
+        assert!(cust.is_some());
+        let cust = cust.unwrap();
+        assert_eq!(cust.id, alice_id);
+        assert_eq!(cust.name, Some("Alice".to_string()));
+
+        // 4. Test update with empty name -> keeps existing name
+        let cleaned_name: Option<String> = None;
+        if let Some(ref new_name) = cleaned_name {
+            conn.execute("UPDATE customers SET name = ?1 WHERE id = ?2", params![new_name, alice_id]).unwrap();
+        }
+        let alice_name_after: Option<String> = conn.query_row(
+            "SELECT name FROM customers WHERE id = ?1",
+            [alice_id],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(alice_name_after, Some("Alice".to_string()));
+
+        // 5. Test update with non-empty name -> updates name
+        let new_name = Some("Alice Cooper".to_string());
+        conn.execute("UPDATE customers SET name = ?1 WHERE id = ?2", params![new_name, alice_id]).unwrap();
+        let alice_name_updated: Option<String> = conn.query_row(
+            "SELECT name FROM customers WHERE id = ?1",
+            [alice_id],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(alice_name_updated, Some("Alice Cooper".to_string()));
+
+        // 6. Test insert customer with no name (empty/None)
+        conn.execute(
+            "INSERT INTO customers (name, phone, email, loyalty_points) VALUES (?1, ?2, ?3, ?4)",
+            params![None::<String>, "9123456780", None::<String>, 0],
+        ).unwrap();
+        let bob_id = conn.last_insert_rowid();
+        let bob: CustomerDetails = conn.query_row(
+            "SELECT id, name, phone, email, loyalty_points FROM customers WHERE id = ?1",
+            [bob_id],
+            |row| Ok(CustomerDetails {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                phone: row.get(2)?,
+                email: row.get(3)?,
+                loyalty_points: row.get(4)?,
+            }),
+        ).unwrap();
+        assert_eq!(bob.name, None);
+        assert_eq!(bob.phone, "9123456780");
+
+        // 7. Test attach customer to order
+        conn.execute(
+            "INSERT INTO orders (table_id, customer_id, status, notes, created_at) VALUES (?1, ?2, 'Billed', '', '2026-09-04T00:00:00')",
+            params![None::<i64>, None::<i64>],
+        ).unwrap();
+        let order_id = conn.last_insert_rowid();
+
+        conn.execute(
+            "UPDATE orders SET customer_id = ?1 WHERE id = ?2",
+            params![bob_id, order_id],
+        ).unwrap();
+
+        let attached_cust_id: Option<i64> = conn.query_row(
+            "SELECT customer_id FROM orders WHERE id = ?1",
+            [order_id],
+            |row| row.get(0),
+        ).unwrap();
+        assert_eq!(attached_cust_id, Some(bob_id));
     }
 }

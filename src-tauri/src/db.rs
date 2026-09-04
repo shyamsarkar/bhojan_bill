@@ -121,6 +121,61 @@ fn migrate_db(conn: &Connection) -> Result<(), String> {
         let _ = conn.execute("DROP TABLE IF EXISTS purchase_history;", []);
     }
 
+    migrate_customers_name_nullable(conn)?;
+
+    Ok(())
+}
+
+fn migrate_customers_name_nullable(conn: &Connection) -> Result<(), String> {
+    let customers_exists: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'customers'",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(0);
+
+    if customers_exists > 0 {
+        let is_name_notnull: bool = {
+            let mut stmt = conn.prepare("PRAGMA table_info(customers)").map_err(|e| e.to_string())?;
+            let mut rows = stmt.query([]).map_err(|e| e.to_string())?;
+            let mut notnull = false;
+            while let Some(row) = rows.next().map_err(|e| e.to_string())? {
+                let col_name: String = row.get(1).map_err(|e| e.to_string())?;
+                if col_name == "name" {
+                    let nn: i32 = row.get(3).map_err(|e| e.to_string())?;
+                    if nn == 1 {
+                        notnull = true;
+                    }
+                    break;
+                }
+            }
+            notnull
+        };
+
+        if is_name_notnull {
+            conn.execute("PRAGMA foreign_keys = OFF;", []).map_err(|e| e.to_string())?;
+            conn.execute(
+                "CREATE TABLE customers_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT,
+                    phone TEXT UNIQUE NOT NULL,
+                    email TEXT,
+                    loyalty_points INTEGER DEFAULT 0
+                );",
+                [],
+            ).map_err(|e| e.to_string())?;
+
+            conn.execute(
+                "INSERT INTO customers_new (id, name, phone, email, loyalty_points)
+                 SELECT id, name, phone, email, loyalty_points FROM customers;",
+                [],
+            ).map_err(|e| e.to_string())?;
+
+            conn.execute("DROP TABLE customers;", []).map_err(|e| e.to_string())?;
+            conn.execute("ALTER TABLE customers_new RENAME TO customers;", []).map_err(|e| e.to_string())?;
+            conn.execute("PRAGMA foreign_keys = ON;", []).map_err(|e| e.to_string())?;
+        }
+    }
+
     Ok(())
 }
 
@@ -181,7 +236,7 @@ fn create_tables(conn: &Connection) -> Result<(), String> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS customers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            name TEXT,
             phone TEXT UNIQUE NOT NULL,
             email TEXT,
             loyalty_points INTEGER DEFAULT 0

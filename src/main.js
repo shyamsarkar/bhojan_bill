@@ -53,6 +53,7 @@ let productModal, productModalTitle, productModalCategory, productModalName, pro
 let customerModal, customerModalTitle, customerModalName, customerModalPhone, customerModalEmail, customerModalCancel, customerModalSave, activeCustomerEditId;
 let customerHistoryModal, custHistoryName, custHistoryList, custHistoryClose;
 let checkoutModal, checkoutModalAmount, checkoutPaymentMode, checkoutSplitBlock, checkoutChangeBlock, checkoutChangeRow, checkoutChangeAmount, checkoutCashReceived, checkoutModalCancel, checkoutModalPrint, checkoutModalConfirm;
+let checkoutCustomerPhone, checkoutCustomerName, checkoutCustomerSearchBtn, checkoutCustomerStatus;
 let splitCashAmount, splitUpiAmount, splitCardAmount, splitRemainingTotal;
 let receiptStoreName, receiptStoreAddress, receiptStorePhone, receiptStoreGstin, receiptBillNumber, receiptDate, receiptTable, receiptCashier, receiptCustomerRow, receiptCustomer, receiptItemsBody, receiptSubtotal, receiptDiscount, receiptService, receiptTax, receiptTotal, receiptFooterMsg;
 
@@ -226,6 +227,11 @@ function initDOMElements() {
   checkoutModalPrint = document.getElementById("checkout-modal-print");
   checkoutModalConfirm = document.getElementById("checkout-modal-confirm");
 
+  checkoutCustomerPhone = document.getElementById("checkout-customer-phone");
+  checkoutCustomerName = document.getElementById("checkout-customer-name");
+  checkoutCustomerSearchBtn = document.getElementById("checkout-customer-search-btn");
+  checkoutCustomerStatus = document.getElementById("checkout-customer-status");
+
   splitCashAmount = document.getElementById("split-cash-amount");
   splitUpiAmount = document.getElementById("split-upi-amount");
   splitCardAmount = document.getElementById("split-card-amount");
@@ -310,6 +316,7 @@ function setupEventListeners() {
   checkoutBtn.addEventListener("click", openCheckoutScreen);
   checkoutModalCancel.addEventListener("click", async () => {
     checkoutModal.classList.add("hidden");
+    resetCheckoutCustomerFields();
     // If we generated a bill to open this modal, void it so the order goes back to editable
     if (activeOrderId && activeOrderStatus === "Billed") {
       try {
@@ -324,6 +331,17 @@ function setupEventListeners() {
   checkoutCashReceived.addEventListener("input", calculateChangeAmount);
   checkoutModalPrint.addEventListener("click", () => window.print());
   checkoutModalConfirm.addEventListener("click", finalizeTransaction);
+
+  // Checkout customer lookup listeners
+  checkoutCustomerPhone.addEventListener("blur", lookupCustomerByPhone);
+  checkoutCustomerPhone.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      lookupCustomerByPhone();
+    }
+  });
+  checkoutCustomerSearchBtn.addEventListener("click", lookupCustomerByPhone);
+  checkoutCustomerName.addEventListener("input", handleCheckoutCustomerNameInput);
 
   // KOT button listener
   document.getElementById("kot-btn").addEventListener("click", sendKot);
@@ -550,7 +568,8 @@ async function loadCustomers() {
     customers = await invoke("get_customers");
     cartCustomerSelect.innerHTML = `<option value="">Walk-in Customer</option>`;
     customers.forEach(c => {
-      cartCustomerSelect.innerHTML += `<option value="${c.id}">${c.name} (${c.phone})</option>`;
+      const displayName = c.name || "Customer";
+      cartCustomerSelect.innerHTML += `<option value="${c.id}">${displayName} (${c.phone})</option>`;
     });
   } catch (err) {
     console.error(err);
@@ -985,6 +1004,23 @@ async function openCheckoutScreen() {
     checkoutChangeRow.classList.remove("hidden");
     checkoutModalConfirm.disabled = false;
 
+    // Customer lookup initialization in checkout modal
+    let attachedCustomer = null;
+    if (orderHeader.customer_id) {
+      attachedCustomer = customers.find(c => c.id === orderHeader.customer_id);
+    }
+    if (attachedCustomer) {
+      checkoutCustomerPhone.value = attachedCustomer.phone || "";
+      checkoutCustomerName.value = attachedCustomer.name || "";
+      checkoutCustomerStatus.textContent = `Attached (${attachedCustomer.loyalty_points} pts)`;
+      checkoutCustomerStatus.style.color = "var(--primary)";
+    } else {
+      checkoutCustomerPhone.value = "";
+      checkoutCustomerName.value = orderHeader.customer_name || "";
+      checkoutCustomerStatus.textContent = "Walk-in Sale";
+      checkoutCustomerStatus.style.color = "var(--text-secondary)";
+    }
+
     splitCashAmount.value = 0;
     splitUpiAmount.value = 0;
     splitCardAmount.value = 0;
@@ -1125,7 +1161,104 @@ function calculateSplitPortions() {
   }
 }
 
+let lastSearchedCustomerPhone = "";
+
+function resetCheckoutCustomerFields() {
+  checkoutCustomerPhone.value = "";
+  checkoutCustomerName.value = "";
+  checkoutCustomerStatus.textContent = "Walk-in Sale";
+  checkoutCustomerStatus.style.color = "var(--text-secondary)";
+  lastSearchedCustomerPhone = "";
+}
+
+async function lookupCustomerByPhone() {
+  const phone = checkoutCustomerPhone.value.trim();
+  if (!phone) {
+    checkoutCustomerStatus.textContent = "Walk-in Sale";
+    checkoutCustomerStatus.style.color = "var(--text-secondary)";
+    checkoutCustomerName.value = "";
+    lastSearchedCustomerPhone = "";
+    if (receiptCustomerRow && receiptCustomer) {
+      receiptCustomerRow.classList.add("hidden");
+      receiptCustomer.textContent = "-";
+    }
+    return;
+  }
+
+  try {
+    const customer = await invoke("find_customer_by_phone", { phone });
+    if (customer) {
+      checkoutCustomerName.value = customer.name || "";
+      checkoutCustomerStatus.textContent = `Found (${customer.loyalty_points} pts)`;
+      checkoutCustomerStatus.style.color = "var(--primary)";
+      if (receiptCustomerRow && receiptCustomer) {
+        receiptCustomerRow.classList.remove("hidden");
+        receiptCustomer.textContent = customer.name || phone;
+      }
+    } else {
+      checkoutCustomerStatus.textContent = "New Customer";
+      checkoutCustomerStatus.style.color = "var(--warning)";
+      if (lastSearchedCustomerPhone !== phone) {
+        checkoutCustomerName.value = "";
+      }
+      if (receiptCustomerRow && receiptCustomer) {
+        if (checkoutCustomerName.value.trim()) {
+          receiptCustomerRow.classList.remove("hidden");
+          receiptCustomer.textContent = checkoutCustomerName.value.trim();
+        } else {
+          receiptCustomerRow.classList.add("hidden");
+          receiptCustomer.textContent = "-";
+        }
+      }
+    }
+    lastSearchedCustomerPhone = phone;
+  } catch (err) {
+    console.error("Error finding customer by phone:", err);
+  }
+}
+
+function handleCheckoutCustomerNameInput() {
+  const name = checkoutCustomerName.value.trim();
+  if (receiptCustomerRow && receiptCustomer) {
+    if (name) {
+      receiptCustomerRow.classList.remove("hidden");
+      receiptCustomer.textContent = name;
+    } else {
+      const phone = checkoutCustomerPhone.value.trim();
+      if (phone) {
+        receiptCustomerRow.classList.remove("hidden");
+        receiptCustomer.textContent = phone;
+      } else {
+        receiptCustomerRow.classList.add("hidden");
+        receiptCustomer.textContent = "-";
+      }
+    }
+  }
+}
+
 async function finalizeTransaction() {
+  const customerPhone = checkoutCustomerPhone.value.trim();
+  if (customerPhone) {
+    const customerName = checkoutCustomerName.value.trim();
+    try {
+      const customerId = await invoke("upsert_customer", {
+        id: null,
+        name: customerName || null,
+        phone: customerPhone,
+        email: null,
+        loyaltyPoints: null
+      });
+
+      await invoke("attach_customer_to_order", {
+        orderId: activeOrderId,
+        customerId: customerId
+      });
+    } catch (err) {
+      alert("Error attaching customer: " + err);
+      return;
+    }
+  }
+
   const paymentMode = checkoutPaymentMode.value;
   let paymentsList = [];
   const billTotalVal = parseFloat(checkoutModalAmount.textContent.replace('₹','')) || 0;
@@ -1168,15 +1301,11 @@ async function finalizeTransaction() {
       username: currentUser.username
     });
 
-    const printerMode = localStorage.getItem("printer_pref") || "simulated";
-    if (printerMode === "system") {
-      window.print();
-    }
-
     // Capture order ID before clearing state
     const completedOrderId = activeOrderId;
 
     checkoutModal.classList.add("hidden");
+    resetCheckoutCustomerFields();
     cart = [];
     activeOrderId = null;
     activeOrderStatus = null;
@@ -1586,7 +1715,7 @@ async function renderCustomersList() {
     list.forEach(c => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td style="padding:12px 16px;">${c.name}</td>
+        <td style="padding:12px 16px;">${c.name || '-'}</td>
         <td style="padding:12px 16px;">${c.phone}</td>
         <td style="padding:12px 16px;">${c.email || '-'}</td>
         <td style="padding:12px 16px; font-weight:600; color:var(--primary);">${c.loyalty_points} pts</td>
@@ -1607,7 +1736,7 @@ async function renderCustomersList() {
 function openCustomerModal(customer) {
   if (customer) {
     customerModalTitle.textContent = "Edit Customer Details";
-    customerModalName.value = customer.name;
+    customerModalName.value = customer.name || "";
     customerModalPhone.value = customer.phone;
     customerModalEmail.value = customer.email || "";
     activeCustomerEditId = customer.id;
@@ -1626,7 +1755,18 @@ async function saveCustomer() {
   const phone = customerModalPhone.value.trim();
   const email = customerModalEmail.value.trim();
   
-  if (!name || !phone) return;
+  if (!name && !phone) {
+    alert("Please enter both name and mobile number.");
+    return;
+  }
+  if (!name) {
+    alert("Please enter customer name.");
+    return;
+  }
+  if (!phone) {
+    alert("Please enter a mobile number.");
+    return;
+  }
 
   try {
     await invoke("upsert_customer", {
@@ -1647,7 +1787,8 @@ async function saveCustomer() {
 
 async function openCustomerHistory(customer) {
   try {
-    custHistoryName.textContent = `${customer.name} (${customer.phone})`;
+    const displayName = customer.name || "Customer";
+    custHistoryName.textContent = `${displayName} (${customer.phone})`;
     custHistoryList.innerHTML = "";
     
     const orders = await invoke("get_customer_orders", { customerId: customer.id });
@@ -1753,6 +1894,22 @@ async function reprintOrder(orderId) {
     
     // Disables Finalize to prevent double billing records
     checkoutModalConfirm.disabled = true;
+
+    let reprintCust = null;
+    if (orderData.header.customer_id) {
+      reprintCust = customers.find(c => c.id === orderData.header.customer_id);
+    }
+    if (reprintCust) {
+      checkoutCustomerPhone.value = reprintCust.phone || "";
+      checkoutCustomerName.value = reprintCust.name || "";
+      checkoutCustomerStatus.textContent = `Attached (${reprintCust.loyalty_points} pts)`;
+      checkoutCustomerStatus.style.color = "var(--primary)";
+    } else {
+      checkoutCustomerPhone.value = "";
+      checkoutCustomerName.value = orderData.header.customer_name || "";
+      checkoutCustomerStatus.textContent = "Walk-in Sale";
+      checkoutCustomerStatus.style.color = "var(--text-secondary)";
+    }
 
     // Populate Virtual Receipt
     receiptStoreName.textContent = restaurantInfo.name.toUpperCase();

@@ -649,6 +649,22 @@
           <div id="checkout-modal-amount" style="font-size: 1.8rem; font-weight:700; color: var(--accent);">₹0.00</div>
         </div>
 
+        <!-- Customer Details / Lookup Section (Optional) -->
+        <div
+          style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label class="form-label" style="margin: 0; font-size: 0.8rem; font-weight: 600;">Customer Details (Optional)</label>
+            <span id="checkout-customer-status" style="font-size: 0.75rem; color: var(--text-secondary);">Walk-in Sale</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input type="tel" id="checkout-customer-phone" class="form-input" placeholder="Mobile number (e.g. 9876543210)" style="flex: 1; padding: 8px 10px; font-size: 0.85rem;" />
+            <button type="button" id="checkout-customer-search-btn" class="modal-btn" style="padding: 6px 14px; font-size: 0.8rem; background: var(--bg-hover); border: 1px solid var(--border); cursor: pointer; white-space: nowrap;">Search</button>
+          </div>
+          <div>
+            <input type="text" id="checkout-customer-name" class="form-input" placeholder="Customer name (optional)" style="width: 100%; padding: 8px 10px; font-size: 0.85rem;" />
+          </div>
+        </div>
+
         <div class="form-group" style="margin:0;">
           <label class="form-label">Payment Mode</label>
           <select id="checkout-payment-mode" class="form-input" style="padding: 10px;">

@@ -32,6 +32,8 @@
           "delete_product",
           "get_customers",
           "upsert_customer",
+          "find_customer_by_phone",
+          "attach_customer_to_order",
           "get_sales_report",
           "backup_db",
           "restore_db",
