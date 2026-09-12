@@ -1885,9 +1885,9 @@ pub struct PaymentSummaryReport {
 fn backup_db(app: tauri::AppHandle, state: tauri::State<'_, db::DbPathState>) -> Result<(), String> {
     let db_path = state.path.clone();
 
-    // Build a default filename with a timestamp: mealdesk_backup_YYYYMMDD_HHMMSS.db
+    // Build a default filename with a timestamp: bhojanbill_backup_YYYYMMDD_HHMMSS.db
     let now = chrono::Local::now();
-    let default_name = now.format("mealdesk_backup_%Y%m%d_%H%M%S.db").to_string();
+    let default_name = now.format("bhojanbill_backup_%Y%m%d_%H%M%S.db").to_string();
 
     let save_path = app
         .dialog()

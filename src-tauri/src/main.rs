@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    meal_desk_lib::run()
+    bhojan_bill_lib::run()
 }

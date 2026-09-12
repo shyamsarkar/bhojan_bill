@@ -1990,7 +1990,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "meal-desk"
+name = "bhojan-bill"
 version = "0.1.0"
 dependencies = [
  "chrono",

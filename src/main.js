@@ -71,7 +71,7 @@ window.addEventListener("DOMContentLoaded", () => {
   startClock();
 
   // Restore saved session if exists
-  const savedUser = localStorage.getItem("mealdesk_user");
+  const savedUser = localStorage.getItem("bhojanbill_user");
   if (savedUser) {
     try {
       const user = JSON.parse(savedUser);
@@ -79,7 +79,7 @@ window.addEventListener("DOMContentLoaded", () => {
         handleLoginSuccess(user);
       }
     } catch (e) {
-      localStorage.removeItem("mealdesk_user");
+      localStorage.removeItem("bhojanbill_user");
     }
   }
 });
@@ -283,7 +283,7 @@ function setupEventListeners() {
       handleLoginSuccess(user);
     } catch (err) {
       loginError.textContent = typeof err === "string" ? err : "Login failed. Please try again.";
-      console.error("[MealDesk] Login error:", err);
+      console.error("[BhojanBill] Login error:", err);
     }
   });
 
@@ -522,7 +522,7 @@ async function performRestore() {
 // Router & State Loads
 async function handleLoginSuccess(user) {
   currentUser = user;
-  localStorage.setItem("mealdesk_user", JSON.stringify(user));
+  localStorage.setItem("bhojanbill_user", JSON.stringify(user));
   displayUserName.textContent = user.username.toUpperCase();
 
   // Set default report dates to current month
@@ -551,7 +551,7 @@ async function handleLoginSuccess(user) {
 
 function handleLogout() {
   currentUser = null;
-  localStorage.removeItem("mealdesk_user");
+  localStorage.removeItem("bhojanbill_user");
   usernameInput.value = "";
   passwordInput.value = "";
   loginError.textContent = "";
@@ -624,7 +624,7 @@ async function switchPanel(panelId) {
       loadSettingsForm();
     }
   } catch (err) {
-    console.error(`[MealDesk] Error loading panel '${panelId}':`, err);
+    console.error(`[BhojanBill] Error loading panel '${panelId}':`, err);
   }
 }
 
@@ -1027,7 +1027,7 @@ async function openCheckoutScreen() {
     splitRemainingTotal.textContent = `₹${orderHeader.total.toFixed(2)}`;
 
     // Populate print template
-    receiptStoreName.textContent = (restaurantInfo && restaurantInfo.name) ? restaurantInfo.name.toUpperCase() : "MEALDESK BISTRO";
+    receiptStoreName.textContent = (restaurantInfo && restaurantInfo.name) ? restaurantInfo.name.toUpperCase() : "BHOJANBILL";
     receiptStoreAddress.textContent = (restaurantInfo && restaurantInfo.address) ? restaurantInfo.address : "";
     receiptStorePhone.textContent = (restaurantInfo && restaurantInfo.phone) ? `Ph: ${restaurantInfo.phone}` : "";
     receiptStoreGstin.textContent = (restaurantInfo && restaurantInfo.gstin) ? `GSTIN: ${restaurantInfo.gstin}` : "";

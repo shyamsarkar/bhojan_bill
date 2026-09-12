@@ -18,7 +18,7 @@ pub fn hash_password(password: &str) -> String {
 pub fn init_db(app_handle: &AppHandle) -> Result<PathBuf, String> {
     let app_dir = app_handle.path().app_data_dir().map_err(|e| e.to_string())?;
     fs::create_dir_all(&app_dir).map_err(|e| e.to_string())?;
-    let db_path = app_dir.join("mealdesk.db");
+    let db_path = app_dir.join("bhojanbill.db");
     let conn = Connection::open(&db_path).map_err(|e| e.to_string())?;
     
     // Run migration first (handles existing table renaming and schema updates)
@@ -385,7 +385,7 @@ fn seed_default_data(conn: &Connection) -> Result<(), String> {
     if info_count == 0 {
         conn.execute(
             "INSERT INTO restaurant_info (id, name, logo, gstin, address, phone, email, receipt_footer) 
-             VALUES (1, 'MealDesk Bistro', '', '27AAAAA1111A1Z1', '123 Foodie Street, Gourmet City', '+1234567890', 'info@mealdesk.com', 'Thank you for dining with us!')",
+             VALUES (1, 'BhojanBill', '', '27AAAAA1111A1Z1', '123 Foodie Street, Gourmet City', '+1234567890', 'info@bhojanbill.com', 'Thank you for dining with us!')",
             [],
         )
         .map_err(|e| e.to_string())?;

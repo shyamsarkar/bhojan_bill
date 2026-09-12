@@ -1,8 +1,8 @@
-# MealDesk
+# BhojanBill
 
 ## Overview
 
-MealDesk is a desktop restaurant billing (POS) application built with
+BhojanBill is a desktop restaurant billing (POS) application built with
 **Rust + Tauri**.
 
 ### Goals
@@ -133,7 +133,7 @@ MealDesk is a desktop restaurant billing (POS) application built with
 ## Proposed Project Structure
 
 ``` text
-mealdesk/
+BhojanBill/
 ├── src-tauri/
 ├── src/
 ├── core/

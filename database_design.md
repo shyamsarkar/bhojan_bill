@@ -1,6 +1,6 @@
-# MealDesk Database Design
+# BhojanBill Database Design
 
-This document details the updated database architecture of the Rust + Tauri MealDesk restaurant POS application.
+This document details the updated database architecture of the Rust + Tauri BhojanBill restaurant POS application.
 
 ---
 
