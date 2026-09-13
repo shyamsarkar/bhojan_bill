@@ -81,7 +81,7 @@
       <div class="dev-credits">
         <div class="dev-credits-label">Developed by</div>
         <div class="dev-credits-name">Shyam Sarkar</div>
-        <a href="mailto:shyamsarkar@zohomail.in" class="dev-credits-email">shyamsarkar@zohomail.in</a>
+        <div class="dev-credits-email">shyamsarkar@zohomail.in</div>
       </div>
     </div>
   </div>
@@ -93,9 +93,9 @@
       <div class="sidebar-header">
         <span class="sidebar-brand">BhojanBill</span>
       </div>
-      <div class="sidebar-user">
-        <span id="display-user-name" class="user-name">Admin</span>
-        <div id="app-clock" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">--:--:--</div>
+      <div class="sidebar-dev">
+        <div>Developer:<span class="dev-credits-name"> Shyam Sarkar</span></div>
+        <div class="dev-credits-email">shyamsarkar@zohomail.in</div>
       </div>
       <nav class="sidebar-nav">
         <div class="nav-item active" data-panel="pos">
@@ -202,10 +202,16 @@
                 <span id="cart-total">₹0.00</span>
               </div>
               <div style="display: flex; gap: 6px; align-items: center;">
-                <button id="kot-btn" class="quick-role-btn" style="background: var(--accent); color: black; border-color: var(--accent);">KOT</button>
-                <button id="clear-cart-btn" class="quick-role-btn" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.35);">Clear</button>
-                <button id="cancel-order-btn" class="quick-role-btn hidden" style="color: var(--danger); border-color: var(--danger); background: rgba(239, 68, 68, 0.05);">Cancel Order</button>
-                <button id="checkout-btn" class="quick-role-btn" style="flex: 1; background: var(--primary); color: white; border-color: var(--primary);">💳 Collect Payment</button>
+                <button id="kot-btn" class="quick-role-btn"
+                  style="background: var(--accent); color: black; border-color: var(--accent);">KOT</button>
+                <button id="clear-cart-btn" class="quick-role-btn"
+                  style="color: var(--danger); border-color: rgba(239, 68, 68, 0.35);">Clear</button>
+                <button id="cancel-order-btn" class="quick-role-btn hidden"
+                  style="color: var(--danger); border-color: var(--danger); background: rgba(239, 68, 68, 0.05);">Cancel
+                  Order</button>
+                <button id="checkout-btn" class="quick-role-btn"
+                  style="flex: 1; background: var(--primary); color: white; border-color: var(--primary);">💳 Collect
+                  Payment</button>
               </div>
             </div>
           </section>
@@ -500,11 +506,12 @@
               </div>
             </div>
 
-            <div class="settings-card" style="background: linear-gradient(135deg, rgba(70, 130, 180, 0.05), rgba(218, 165, 32, 0.05)); border-color: rgba(218, 165, 32, 0.2);">
+            <div class="settings-card"
+              style="background: linear-gradient(135deg, rgba(70, 130, 180, 0.05), rgba(218, 165, 32, 0.05)); border-color: rgba(218, 165, 32, 0.2);">
               <div class="dev-credits" style="border: none; padding: 0; margin: 0;">
-                <div class="dev-credits-label">Developed by</div>
+                <div class="dev-credits-label">Developed By</div>
                 <div class="dev-credits-name">Shyam Sarkar</div>
-                <a href="mailto:shyamsarkar@zohomail.in" class="dev-credits-email">shyamsarkar@zohomail.in</a>
+                <div class="dev-credits-email">shyamsarkar@zohomail.in</div>
               </div>
             </div>
           </div>
@@ -653,15 +660,20 @@
         <div
           style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label class="form-label" style="margin: 0; font-size: 0.8rem; font-weight: 600;">Customer Details (Optional)</label>
-            <span id="checkout-customer-status" style="font-size: 0.75rem; color: var(--text-secondary);">Walk-in Sale</span>
+            <label class="form-label" style="margin: 0; font-size: 0.8rem; font-weight: 600;">Customer Details
+              (Optional)</label>
+            <span id="checkout-customer-status" style="font-size: 0.75rem; color: var(--text-secondary);">Walk-in
+              Sale</span>
           </div>
           <div style="display: flex; gap: 8px;">
-            <input type="tel" id="checkout-customer-phone" class="form-input" placeholder="Mobile number (e.g. 9876543210)" style="flex: 1; padding: 8px 10px; font-size: 0.85rem;" />
-            <button type="button" id="checkout-customer-search-btn" class="modal-btn" style="padding: 6px 14px; font-size: 0.8rem; background: var(--bg-hover); border: 1px solid var(--border); cursor: pointer; white-space: nowrap;">Search</button>
+            <input type="tel" id="checkout-customer-phone" class="form-input"
+              placeholder="Mobile number (e.g. 9876543210)" style="flex: 1; padding: 8px 10px; font-size: 0.85rem;" />
+            <button type="button" id="checkout-customer-search-btn" class="modal-btn"
+              style="padding: 6px 14px; font-size: 0.8rem; background: var(--bg-hover); border: 1px solid var(--border); cursor: pointer; white-space: nowrap;">Search</button>
           </div>
           <div>
-            <input type="text" id="checkout-customer-name" class="form-input" placeholder="Customer name (optional)" style="width: 100%; padding: 8px 10px; font-size: 0.85rem;" />
+            <input type="text" id="checkout-customer-name" class="form-input" placeholder="Customer name (optional)"
+              style="width: 100%; padding: 8px 10px; font-size: 0.85rem;" />
           </div>
         </div>
 
@@ -816,14 +828,14 @@
     <div class="modal-content" style="max-width: 420px;">
       <h3 id="cancel-modal-title" class="modal-title">Cancel Item</h3>
       <p id="cancel-modal-item-name" class="modal-desc" style="font-weight:600; color: var(--danger);"></p>
-      
+
 
 
       <div class="form-group" id="cancel-qty-group" style="text-align: left;">
         <label class="form-label">Quantity to Cancel</label>
         <input type="number" id="cancel-qty-input" class="form-input" min="1" step="1" required />
       </div>
-      
+
       <div class="form-group" style="text-align: left;">
         <label class="form-label">Reason for Cancellation</label>
         <select id="cancel-reason-select" class="form-input" style="padding: 8px;">
@@ -842,8 +854,10 @@
       </div>
 
       <div style="display: flex; gap: 10px; margin-top: 15px;">
-        <button id="cancel-modal-cancel-btn" class="modal-btn" style="flex:1; background: var(--bg-hover);">Close</button>
-        <button id="cancel-modal-submit-btn" class="modal-btn" style="flex:1; background: var(--danger); color: white;">Confirm Cancellation</button>
+        <button id="cancel-modal-cancel-btn" class="modal-btn"
+          style="flex:1; background: var(--bg-hover);">Close</button>
+        <button id="cancel-modal-submit-btn" class="modal-btn"
+          style="flex:1; background: var(--danger); color: white;">Confirm Cancellation</button>
       </div>
     </div>
   </div>
@@ -855,7 +869,8 @@
       <div id="kot-print-title" style="font-weight:700; font-size: 1.2rem;">KOT #0</div>
       <div id="kot-print-copy" style="font-size:0.8rem; font-weight: bold; margin-top: 4px;">Print Copy: #1</div>
     </div>
-    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px dashed black; padding-bottom: 6px; margin-bottom: 8px;">
+    <div
+      style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px dashed black; padding-bottom: 6px; margin-bottom: 8px;">
       <span id="kot-print-table">Table: Table 1</span>
       <span id="kot-print-date">Date/Time</span>
     </div>
@@ -868,7 +883,8 @@
       </thead>
       <tbody id="kot-print-items-body"></tbody>
     </table>
-    <div style="border-top: 1px dashed black; margin-top: 8px; padding-top: 8px; text-align: center; font-size: 0.7rem; font-style: italic;">
+    <div
+      style="border-top: 1px dashed black; margin-top: 8px; padding-top: 8px; text-align: center; font-size: 0.7rem; font-style: italic;">
       Kitchen Order Ticket
     </div>
   </div>

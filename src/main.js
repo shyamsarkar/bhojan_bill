@@ -418,6 +418,7 @@ function setupEventListeners() {
 
 function startClock() {
   setInterval(() => {
+    if (!appClock) return;
     const now = new Date();
     appClock.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + 
       " | " + now.toLocaleDateString([], { day: '2-digit', month: 'short' });
@@ -523,7 +524,9 @@ async function performRestore() {
 async function handleLoginSuccess(user) {
   currentUser = user;
   localStorage.setItem("bhojanbill_user", JSON.stringify(user));
-  displayUserName.textContent = user.username.toUpperCase();
+  if (displayUserName) {
+    displayUserName.textContent = user.username.toUpperCase();
+  }
 
   // Set default report dates to current month
   const now = new Date();
